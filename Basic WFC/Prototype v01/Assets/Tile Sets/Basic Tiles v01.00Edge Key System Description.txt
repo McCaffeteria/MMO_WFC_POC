@@ -1,0 +1,5 @@
+Tile edges are named acording to the tile number (00-12) followd by a , and then its cardinal direction (E,N,S,W).
+The edge name is followed by a : and then it's edge type.
+Edge types are it's edge shape (0-2) followed by a , and then it's largest color
+The color descriptions are color letters (B,T,G,F) (blue, tan, green, forest)
+The three edge types are 0 (solid color), 1 (2 color with the larger section facing counter clockwise), and 2 (2 color with largest color facing clockwise)
