@@ -1,5 +1,9 @@
-Tile edges are named acording to the tile number (00-12) followd by a , and then its cardinal direction (E,N,S,W).
+Tile edges are named acording to the tile number (00-12) followd by a , and then its cardinal direction (0-3).
 The edge name is followed by a : and then it's edge type.
 Edge types are it's edge shape (0-2) followed by a , and then it's largest color
 The color descriptions are color letters (B,T,G,F) (blue, tan, green, forest)
 The three edge types are 0 (solid color), 1 (2 color with the larger section facing counter clockwise), and 2 (2 color with largest color facing clockwise)
+
+I should convert all of the ENSW or BTGF indicators into numbers, that way for example i can add or subtract from the  East/north/South/West number based on the number of 90 degree turns it has. For example, if an eastern neighbor were tile 06 and were rotated once clockwise, then it's western edge is not 0,T like the key says, it's actually the southern edge 2,G. South should be +1 from East. If instead it were turned twice clockwise you'd add 2 and get the western side.
+
+The new system is that every turn clockwise increments the edge type counterclockwise, so the edges start with North as 0 and increase counterclockwise (where West is 1, South is 2, and East is 3)

@@ -4,11 +4,25 @@ var searchDist = 3
 var playerLoc = Vector2()
 var rng = RandomNumberGenerator.new()
 var edgeKeyAddress = 'res://assets/Tile Sets/Basic Tiles v01.00 Edge Key.txt'
+var edgeKey = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	clear()
 	rng.randomize()
+	#Apparently it's easier to just load every line of the edge key text file into an array and read them that way. It's only less than 1kb so it's honestly probably faster than reading from disk every frame anyway.
+	var f = File.new()
+	f.open(edgeKeyAddress, File.READ)
+	var index: int = 0 #In the online help I borrowed this started at index 1, not sure why, 0 seems like it makes more sense
+	while not f.eof_reached():
+		var line = f.get_line()
+		if edgeKey.size() == index:
+			edgeKey.append(line)
+		else:
+			edgeKey[index] = line
+		#This is such a bad way to double check the length of the array, oh well
+		index += 1
+	f.close()
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
@@ -30,9 +44,9 @@ func WFC():
 func generate_wfc_array(Vector2 centerCell, int arrayRadius): #tilemap coordinates
 	#This method should really be part of a custom 4D array class, do that later
 	#Same with update_cell_status
-	Vector2 currentCell = centerCell
-	Vector2 arrayOffset = calcOffset(currentCell, arrayRadius)
-	Array wfcArray = []
+	var currentCell: Vector2 = centerCell
+	var arrayOffset: Vector2 = calcOffset(currentCell, arrayRadius)
+	var wfcArray: Array = []
 	wfcArray.resize((arrayRadius*2)+1) #Set array's X dimension length
 	for cellX in range(0, arrayRadius*2):
 		#add a new Y dimension array to each X index and set the Y dimension length
@@ -44,42 +58,76 @@ func generate_wfc_array(Vector2 centerCell, int arrayRadius): #tilemap coordinat
 			wfcArray[cellX][cellY] = update_cell_status(currentCell, arrayOffset)
 
 func update_cell_status(Vector2 arrayCell, Vector2 offset): #arguments assume array coordinates, converts to world coordinates locally and then returns the 2D array
-	var edgeKey = File.new()
-	edgeKey.open(edgeKeyAddress, File.READ)
-	Vector2 worldCell = array_to_world(arrayCell, offset)
-	Vector2 horiz = Vector2(1,0)
-	Vector2 vert = Vector2(0,1)
-	Array cellStatus = [] #This is the array object that will ultimately be returned
+	var worldCell: Vector2 = array_to_world(arrayCell, offset)
+	var horiz: Vector2 = Vector2(1,0)
+	var vert: Vector2 = Vector2(0,1)
+	var cellStatus: Array = [] #This is the array object that will ultimately be returned
 	cellStatus.resize(13) #Sets the length of the cell status array equal to the number of tile types I'm using
 	for cellType in range(0, 12):
 		cellStatus[cellType] = []
 		cellStatus[CellType].resize(4) #Sets the array within each cell type to be 4 to represent the 4 rotational positions
 		for cellBool in range(0, 3):
 			cellStatus[cellType][cellBool] = true #Sets the value of all possible tile types and rotations as true, in preperation for options to be eliminated later
-	int neighborIndex = get_cell(worldCell+horiz) #This should get the tile ID of the tile to the east of the target cell
+	int neighborIndex = get_cell(worldCell+vert) #North
 	if neighborIndex != -1:
-		"Find tile rotation."
-		
-		get_tile_info(neighborIndex, tileRot) #I don't know what format this will return yet, but it will be a list of valid tile IDs and the ENSW edges of that ID that match.
-		
-		"Once you have a list of valid tile edges, call" get_tile_rotation() "for each tile edge in the list.
-		
-		Once I have the list of valid tiles and their rotations, I have to ELIMINATE all of the OTHER options from the existing array.
+		var tileMatches: array = get_tile_matches(neighborIndex, 0) #I don't know what format this will return yet, but it will be a list of valid tile IDs and the ENSW edges of that ID that match.
+		"Once I have the list of valid tiles and their rotations from get_tile_matches, I have to ELIMINATE all of the OTHER options from the existing array.
 		If I just itterate through the array I can check each array cell ID to see if it's on the list and if it isn't then I can autimatically set all 4 rotations to be false. If the tile ID is on the list, i can check each of the 4 rotation array cells and mark them flase if their cell ID/rotation combo isn't on the list.
 		
 		Once I have eliminated every cell that doesn't work for this neighbor I can move on to the next neighbor cell"
-	neighborIndex = get_cell(worldCell+Vert) #North
-	neighborIndex = get_cell(worldCell-Vert) #South
 	neighborIndex = get_cell(worldCell-horiz) #West
+	if neighborIndex != -1:
+		tileMatches = get_tile_matches(neighborIndex, 1)
+	neighborIndex = get_cell(worldCell-Vert) #South
+	if neighborIndex != -1:
+		tileMatches = get_tile_matches(neighborIndex, 2)
+	neighborIndex = get_cell(worldCell+horiz) #East
+	if neighborIndex != -1:
+		tileMatches = get_tile_matches(neighborIndex, 3)
 	return cellStatus
 	
-func get_tile_info(int tileID, var tileRot):
-	"Check 'Basic Tiles v01.00 Edge Key.txt' to figure out what edge of the tile faces the target cell.
-	Itterate through the text key looking for instances of the edge code, and whenever you find one keep track of the tile/edge combo that comes directly before it on the same line.
-	Return that list of tile/edge combos."
+func get_tile_matches(Vector2 worldCell, int tileEdge):
+	#tileEdge uses the same logic as the edge key. A 0 represents the north edge, and every increase increments the edges counter clockwise menaing 1 is west, 2 is south, and 3 is east.
+	var rot: int = get_tile_rotation(worldCell) #Rot uses the same logic as the edge key.
+	var worldCellIndex: int = get_cellv(worldCell)
+	var newEdge: int = posmod(tileEdge+rot, 4) #The posmod modulo function wraps the resuts to be 0-3
+	var edgeCode: string = edgeKey[(worldCellIndex*4)+1+newEdge]
+	if edgeCode[i][5] == "1": #The way I coded the edge types, the 1 and 2 types mate together because their match is inverted. I have to look for the oposite kind.
+		edgeCode[i][5] = "2"
+	else:
+		if edgeCode[i][5] == "2":
+			edgeCode[i][5] = "1"
+	var matches: array = []
+	var matchesCount: int = 0
+	for i in range(0, edgeKey.size()-1):
+		if edgeKey[i].substr(5, -1) == edgeCode.substr(5, -1): #characters 5 6 and 7 contain the edge type and color code, so reading all characters from position 5 onward should work.
+			if matches.size() == matchesCount:
+				matches.append(edgeKey[i].substr(0, 4))#This sets the value to the first 4 characters, which is the tile index and rotation code.
+				matchesCount += 1
+			else:
+				matches[matchesCount] = edgeKey[i].substr(0, 4) #This sets the value to the first 4 characters, which is the tile index and rotation code.
+				matchesCount += 1
+			#Once again, this is awful. Find a better way to check the array length.
+	for i in range 0, matches.size()-1):
+		matches[i][3] = String(posmod(int(matches[i][3])+3, 4)) #Reads the character into an int, adds 3, does a modulo 4 on that int, then casts that back to a string to overwrite itself. Now the list of matches should all be valid for the worldCell tile.
+	return matches #Matches should only contain an array of the 4 character tile index/rotation codes.
 
-func get_tile_rotation(int tileID, int tileEdge, int neighborDirection):
-	"Calculate the number of clockwise rotations from default the tile has been rotated. This requires interpriting the flip/transpose signals from the tile."
+func get_tile_rotation(Vector2 worldCell):
+	#Calculate the number of clockwise rotations from default the tile has been rotated. This requires interpriting the flip/transpose signals from the tile. Should return an integer from 0-3
+	#The valid tile configurations I care about are: zero flips or transposiitons (north), both flips and no transposition (south), transposed and one flip (east/west), Depending on whether the transpose is calculated before the flip or not will deturmine which one it is. double check this later. Anything else should result in a tile that doesn't actually exist and cant be rorated normally."
+	var rot: int
+	if is_cell_x_flipped(worldCell.x, worldCell.y) == true:
+		if is_cell_y_flipped(worldCell.x, worldCell.y) == true:
+			rot = 2
+		else:
+			rot = 1 or 3
+	else:
+		if is_cell_y_flipped(worldCell.x, worldCell.y) == true:
+			rot = 3 or 1
+		else:
+			rot = 0
+	#Consider putting a thing in here to also check for transpose before each rot assignment, just to double check there's no errors
+	return rot
 
 #Honestly these aren't nescesary, they are just here so I don't forget which way the vectors need to be added/subtracted
 func calcOffset(Vector2 centerCell, Vector2 arrayRadius):
