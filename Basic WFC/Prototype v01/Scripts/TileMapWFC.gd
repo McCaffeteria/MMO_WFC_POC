@@ -68,9 +68,9 @@ func update_cell_status(Vector2 arrayCell, Vector2 offset): #arguments assume ar
 		If I just itterate through the array I can check each array cell ID to see if it's on the list and if it isn't then I can autimatically set all 4 rotations to be false. If the tile ID is on the list, i can check each of the 4 rotation array cells and mark them flase if their cell ID/rotation combo isn't on the list.
 		
 		Once I have eliminated every cell that doesn't work for this neighbor I can move on to the next neighbor cell"
-	int neighborIndex = get_cell(worldCell+Vert) #North
-	int neighborIndex = get_cell(worldCell-Vert) #South
-	int neighborIndex = get_cell(worldCell-horiz) #West
+	neighborIndex = get_cell(worldCell+Vert) #North
+	neighborIndex = get_cell(worldCell-Vert) #South
+	neighborIndex = get_cell(worldCell-horiz) #West
 	return cellStatus
 	
 func get_tile_info(int tileID, var tileRot):
@@ -79,8 +79,7 @@ func get_tile_info(int tileID, var tileRot):
 	Return that list of tile/edge combos."
 
 func get_tile_rotation(int tileID, int tileEdge, int neighborDirection):
-	"calculate the rotation that would be required for that tile edge to line up (for example, if tile edge 06,W were a valid choice it would need to be rotated 180 degrees, so that the western edge of tile 06 is now facing east).
-	return that tile id and rotation, potentially as 2 integers that corespond to the array index that will stay true."
+	"Calculate the number of clockwise rotations from default the tile has been rotated. This requires interpriting the flip/transpose signals from the tile."
 
 #Honestly these aren't nescesary, they are just here so I don't forget which way the vectors need to be added/subtracted
 func calcOffset(Vector2 centerCell, Vector2 arrayRadius):
