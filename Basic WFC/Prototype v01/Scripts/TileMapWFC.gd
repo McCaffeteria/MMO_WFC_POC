@@ -70,21 +70,27 @@ func update_cell_status(Vector2 arrayCell, Vector2 offset): #arguments assume ar
 			cellStatus[cellType][cellBool] = true #Sets the value of all possible tile types and rotations as true, in preperation for options to be eliminated later
 	int neighborIndex = get_cell(worldCell+vert) #North
 	if neighborIndex != -1:
-		var tileMatches: array = get_tile_matches(neighborIndex, 0) #I don't know what format this will return yet, but it will be a list of valid tile IDs and the ENSW edges of that ID that match.
-		"Once I have the list of valid tiles and their rotations from get_tile_matches, I have to ELIMINATE all of the OTHER options from the existing array.
-		If I just itterate through the array I can check each array cell ID to see if it's on the list and if it isn't then I can autimatically set all 4 rotations to be false. If the tile ID is on the list, i can check each of the 4 rotation array cells and mark them flase if their cell ID/rotation combo isn't on the list.
-		
-		Once I have eliminated every cell that doesn't work for this neighbor I can move on to the next neighbor cell"
+		var tileMatches: array = get_tile_matches(neighborIndex, 0) #titleMatches should be the same exact format as cellStatus, and so i can look at every cell in tile matches that is false and set that same tile in cellStatus as false too.
+		eliminate_tiles(tileMatches, cellStatus)
 	neighborIndex = get_cell(worldCell-horiz) #West
 	if neighborIndex != -1:
 		tileMatches = get_tile_matches(neighborIndex, 1)
+		eliminate_tiles(tileMatches, cellStatus)
 	neighborIndex = get_cell(worldCell-Vert) #South
 	if neighborIndex != -1:
 		tileMatches = get_tile_matches(neighborIndex, 2)
+		eliminate_tiles(tileMatches, cellStatus)
 	neighborIndex = get_cell(worldCell+horiz) #East
 	if neighborIndex != -1:
 		tileMatches = get_tile_matches(neighborIndex, 3)
+		eliminate_tiles(tileMatches, cellStatus)
 	return cellStatus
+
+func eliminate_tiles(Array tileMatches, Array cellStatus): #Suposedly arrays are passed by refference and so I don't need to return them, we'll see
+	for cellType in range(0, 12):
+		for cellBool in range(0, 3):
+			if tileMatches[cellType][cellBool] == false:
+				cellStatus[cellType][cellBool] = false
 	
 func get_tile_matches(Vector2 worldCell, int tileEdge):
 	#tileEdge uses the same logic as the edge key. A 0 represents the north edge, and every increase increments the edges counter clockwise menaing 1 is west, 2 is south, and 3 is east.
@@ -97,17 +103,20 @@ func get_tile_matches(Vector2 worldCell, int tileEdge):
 	else:
 		if edgeCode[i][5] == "2":
 			edgeCode[i][5] = "1"
-	var matches: array = []
-	var matchesCount: int = 0
-	for i in range(0, edgeKey.size()-1):
-		if edgeKey[i].substr(5, -1) == edgeCode.substr(5, -1): #characters 5 6 and 7 contain the edge type and color code, so reading all characters from position 5 onward should work.
-			if matches.size() == matchesCount:
-				matches.append(edgeKey[i].substr(0, 4))#This sets the value to the first 4 characters, which is the tile index and rotation code.
-				matchesCount += 1
+	var matches: Array = [] #This is the array object that will ultimately be returned
+	matches.resize(13) #Sets the length of the cell status array equal to the number of tile types I'm using
+	var edgeKeyLine: int = 0 #this tracks what line of edge key im on, and it will be incremented every time i write to matchesY
+	for x in range(0, 12):
+		matches[x] = []
+		matches[x].resize(4) #Sets the array within each cell type to be 4 to represent the 4 rotational positions
+		for y in range(0, 3):
+			if edgeKey[edgeKeyLine].substr(5, -1) == edgeCode.substr(5, -1): #characters 5 6 and 7 contain the edge type and color code, so reading all characters from position 5 onward should work.
+				matches[x][posmod(y+tileEdge, 4)] = true
 			else:
-				matches[matchesCount] = edgeKey[i].substr(0, 4) #This sets the value to the first 4 characters, which is the tile index and rotation code.
-				matchesCount += 1
-			#Once again, this is awful. Find a better way to check the array length.
+				matches[x][posmod(y+tileEdge, 4)] = false
+			#The posmod is there because the codes being written to the array are assuming the matching edge is facing north, but I need to rotate them acording to the tileEdge.
+			#This should result in an array full of true/false values coresoponding to the codes in edgeKey
+			
 	for i in range 0, matches.size()-1):
 		matches[i][3] = String(posmod(int(matches[i][3])+3, 4)) #Reads the character into an int, adds 3, does a modulo 4 on that int, then casts that back to a string to overwrite itself. Now the list of matches should all be valid for the worldCell tile.
 	return matches #Matches should only contain an array of the 4 character tile index/rotation codes.
