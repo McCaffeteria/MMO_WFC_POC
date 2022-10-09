@@ -33,11 +33,31 @@ func _process(delta):
 				set_cell(cellX,cellY,rng.randi_range(0, 12))
 
 func WFC():
-	var wfcArray: Array = generate_wfc_array(world_to_map(get_node("../Player Icon").position), searchDist)
-	#Itterate through the array and count the number of cells that: are already set, have zero solutions, have 1 solution, or have 2 or more solutions
+	"Before I do anything, just check to see if all cells within the search radius are set. If they are set then do nothing."
+	#If any cells are not set then continue.
+	var playerPosition: Vector2 = world_to_map(get_node("../Player Icon").position)
+	var wfcArray: Array = generate_wfc_array(playerPosition, searchDist) #Generate the array full of true/false values for every tile type and rotation of every tile within the search radius.
+	
+	#For every [x][y] position of the array and record the number of solutions (true values) it has. Do this using a 2D array with integers.
 	#If a tile has zero solutions throw an error, we messed up
-	#For every tile represented by the array that has only 1 valid configuration that is not yet set, set them and return to itterating through the array
-	#else if all tiles have 2 or more solutions,
+	#If a tile's wfcArray[x][y] location contains nothing then the tile should already be set. Maybe just check if the tile is set for every xy position.
+	#For every tile represented by the array that has only 1 valid configuration that is not yet set, set them and continue itterating through the array
+	#Once I reach the end of the array and some non-zero number of elements with a single solution have been set, run generate_wfc_array() again. This is a While loop.
+	var setCount: int = 1
+	while setCount != 0:
+		for x in range(0, wfcArray.size()-1):
+			for y in range(0, wfcArray[x].size()-1):
+				if wfcArray[x][y] != null:
+					var trueList: Array
+					for t in range(0, wfcArray[x][y].size()-1):
+						for r in range(0, wfcArray[x][y][t].size()-1):
+							if wfcArray[x][y][t][r] == true:
+								trueList.append(Vector2(t, r)) #Records the tile type and rotations that are valid so that I can go back and check which one was true later.
+					if trueList.size() == 1:
+						playerPosition
+						set_cell(cellX,cellY,rng.randi_range(0, 12))
+	
+	#If I get to the end of the loop and zero cells have been set, 
 
 func generate_wfc_array(var centerCell: Vector2, var arrayRadius: int): #tilemap coordinates
 	#This method should really be part of a custom 4D array class, do that later
@@ -58,6 +78,8 @@ func generate_wfc_array(var centerCell: Vector2, var arrayRadius: int): #tilemap
 
 func update_cell_status(var arrayCell: Vector2, var offset: Vector2): #arguments assume array coordinates, converts to world coordinates locally and then returns the 2D array
 	var worldCell: Vector2 = array_to_world(arrayCell, offset)
+	if get_cellv(worldCell) != -1:
+		return #If the tile is already set then just bail, there's no point in checking it's possible states.
 	var horiz: Vector2 = Vector2(1,0)
 	var vert: Vector2 = Vector2(0,1)
 	var cellStatus: Array = [] #This is the array object that will ultimately be returned
