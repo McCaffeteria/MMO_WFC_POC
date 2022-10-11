@@ -49,7 +49,9 @@ func wfc():
 	if allSet == false:
 		while setCount != 0:
 			setCount = 0
-			wfcItterate(wfcArray, playerPosition, solutionCount)
+			var wfcItterateTemp: Array = wfcItterate(wfcArray, playerPosition, solutionCount)
+			wfcArray = wfcItterateTemp[0]
+			solutionCount = wfcItterateTemp[1]
 			var randomDepth: int = 2
 			while randomDepth < 14:
 				if setCount != 0:
@@ -60,7 +62,12 @@ func wfc():
 					for y in range(0, solutionCount[x].size()-1):
 						if setCount != 0:
 							break
+						if solutionCount[x][y] == 0:
+							print("Panic: zero solution at x: " + String(x) + ", y: " + String(y))
 						if solutionCount[x][y] == randomDepth:
+							print("Random Depth: " + String(randomDepth))
+							print("x: " + String(x) + ", y: " + String(y))
+							print("trueList length: " + String(trueList.size()))
 							flipTrans = calc_flip_trans(trueList[rng.randi_range(0, randomDepth-1)].y)
 							set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)), trueList[rng.randi_range(0, randomDepth-1)].x ,flipTrans[0], flipTrans[1], flipTrans[2])
 							setCount += 1
@@ -94,7 +101,8 @@ func wfcItterate(var wfcArray: Array, var playerPosition: Vector2, var solutionC
 						setCount += 1
 					else:
 						#Record the number of valid options in the list so that I can pick the cell with the fewest options to set randomly
-						solutionCount[x][y] = trueList.size()
+						solutionCount[x][y] = trueList.size() #This assumes solutionCount[x][y] is > 1
+	return [wfcArray, solutionCount] #This is the most disgusting thing I've done here yet. These should just be declared before Ready but this is only a proof of concept and nothing matters so meh.
 
 func generate_wfc_array(var centerCell: Vector2, var arrayRadius: int): #tilemap coordinates
 	#This method should really be part of a custom 4D array class, do that later
