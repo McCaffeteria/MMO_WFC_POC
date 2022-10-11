@@ -11,7 +11,7 @@ var trueList: Array
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	clear()
+	#clear()
 	rng.randomize()
 	#Apparently it's easier to just load every line of the edge key text file into an array and read them that way. It's only less than 1kb so it's honestly probably faster than reading from disk every frame anyway.
 	var f = File.new()
@@ -34,13 +34,17 @@ func _process(delta):
 func wfc():
 	var playerPosition: Vector2 = world_to_map(get_node("../Player Icon").position) #This is Global TileMap coordinates.
 	var wfcArray: Array
+	wfcArray.resize((searchDist*2)+1)
+	for x in range(0, searchDist*2):
+		wfcArray[x] = []
+		wfcArray[x].resize((searchDist*2)+1)
 	var solutionCount: Array
 	var setCount: int = 1
 	#check to see if all cells within the search radius are set. If they are set then do nothing.
 	var allSet: bool = true
-	for cellX in range(playerLoc.x-searchDist,playerLoc.x+searchDist):
-		for cellY in range(playerLoc.y-searchDist,playerLoc.y+searchDist):
-			if get_cell(cellX,cellY) == -1:
+	for x in range(playerLoc.x-searchDist,playerLoc.x+searchDist):
+		for y in range(playerLoc.y-searchDist,playerLoc.y+searchDist):
+			if get_cell(x,y) == -1:
 				allSet = false
 	if allSet == false:
 		while setCount != 0:
@@ -70,6 +74,7 @@ func wfcItterate(var wfcArray: Array, var playerPosition: Vector2, var solutionC
 	var solutionCountClean: Array = [] #This is just a copy of the empty array structure that I can copy every time I need to reconstruct it. The way I made this I don't actually know what cells are empty or not, so instead of just itterating through them all and brute force cleaning them it's easier to just replace it.
 	solutionCountClean.resize(wfcArray.size())
 	for x in range(0, solutionCountClean.size()-1):
+		solutionCountClean[x] = []
 		solutionCountClean[x].resize(wfcArray[x].size())
 	while setCount != 0:
 		wfcArray = generate_wfc_array(playerPosition, searchDist) #Generate the array full of true/false values for every tile type and rotation of every tile within the search radius.
