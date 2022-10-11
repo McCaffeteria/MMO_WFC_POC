@@ -4,7 +4,7 @@ var searchDist = 3
 var playerLoc = Vector2()
 var rng = RandomNumberGenerator.new()
 var edgeKeyAddress = 'res://assets/Tile Sets/Basic Tiles v01.00 Edge Key.txt'
-var edgeKey = []
+var edgeKey: Array
 #flipTrans and trueList are used in two different methods
 var flipTrans: Array
 var trueList: Array
@@ -19,11 +19,7 @@ func _ready():
 	var index: int = 0 #In the online help I borrowed this started at index 1, not sure why, 0 seems like it makes more sense
 	while not f.eof_reached():
 		var line = f.get_line()
-		if edgeKey.size() == index:
-			edgeKey.append(line)
-		else:
-			edgeKey[index] = line
-		#This is such a bad way to double check the length of the array, oh well
+		edgeKey.append(line)
 		index += 1
 	f.close()
 
@@ -69,6 +65,10 @@ func wfc():
 							print("x: " + String(x) + ", y: " + String(y))
 							print("trueList length: " + String(trueList.size()))
 							flipTrans = calc_flip_trans(trueList[rng.randi_range(0, randomDepth-1)].y)
+							#This line is fucked and out of indexes every time, but also I should rewrite the code that sets single solution tiles.
+							#Currently, single solution tiles are set within wfcItterate() but that function should honestly only return the lost of solutions for each tile and the loop HERE should set them. Instead of starting at randomDepth 2 it should just start at 1 (or even zero) and set everything. That way everything should have a trueList even if it's empty.
+							#Currently I'm only putting a trueList in tiles with more than one solution so sometimes if it tries to check a tile that it thought had 1 solution (or no solutions) it freaks out.
+							#ALSO I'm a fucking moron and I've been storing litterally a declared variable called "trueList" in solutionCount[x][y] instead of an un-named array. That's why it's got like 30 solutions half the time.
 							set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)), trueList[rng.randi_range(0, randomDepth-1)].x ,flipTrans[0], flipTrans[1], flipTrans[2])
 							setCount += 1
 				randomDepth += 1
@@ -95,13 +95,16 @@ func wfcItterate(var wfcArray: Array, var playerPosition: Vector2, var solutionC
 						for r in range(0, wfcArray[x][y][t].size()-1):
 							if wfcArray[x][y][t][r] == true:
 								trueList.append(Vector2(t, r)) #Records the tile type and rotations that are valid so that I can go back and check which one was true later.
-					if trueList.size() == 1:
-						flipTrans = calc_flip_trans(trueList[0].y)
-						set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)), trueList[0].x ,flipTrans[0], flipTrans[1], flipTrans[2])
-						setCount += 1
-					else:
-						#Record the number of valid options in the list so that I can pick the cell with the fewest options to set randomly
-						solutionCount[x][y] = trueList.size() #This assumes solutionCount[x][y] is > 1
+					match trueList.size():
+						1:
+							flipTrans = calc_flip_trans(trueList[0].y)
+							set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)), trueList[0].x ,flipTrans[0], flipTrans[1], flipTrans[2])
+							setCount += 1
+						0:
+							print("Zero solutions at x: " + String(x) + ", y: " + String(y))
+						_:
+							#Record the number of valid options in the list so that I can pick the cell with the fewest options to set randomly
+							solutionCount[x][y] = trueList.size() #This assumes solutionCount[x][y] is > 1
 	return [wfcArray, solutionCount] #This is the most disgusting thing I've done here yet. These should just be declared before Ready but this is only a proof of concept and nothing matters so meh.
 
 func generate_wfc_array(var centerCell: Vector2, var arrayRadius: int): #tilemap coordinates
@@ -163,7 +166,7 @@ func get_tile_matches(var worldCell: Vector2, var worldCellIndex: int, var tileE
 	#tileEdge uses the same logic as the edge key. A 0 represents the north edge, and every increase increments the edges counter clockwise menaing 1 is west, 2 is south, and 3 is east.
 	var rot: int = get_tile_rotation(worldCell) #Rot uses the same logic as the edge key.
 	var newEdge: int = posmod(tileEdge+rot, 4) #The posmod modulo function wraps the resuts to be 0-3
-	var edgeCode: String = edgeKey[(worldCellIndex*4)+1+newEdge]
+	var edgeCode: String = edgeKey[(worldCellIndex*4)+newEdge]
 	if edgeCode[5] == "1": #The way I coded the edge types, the 1 and 2 types mate together because their match is inverted. I have to look for the oposite kind.
 		edgeCode[5] = "2"
 	else:
