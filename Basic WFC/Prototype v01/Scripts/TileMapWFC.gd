@@ -1,7 +1,6 @@
 extends TileMap
 
 var searchDist = 3
-var playerLoc = Vector2()
 var rng = RandomNumberGenerator.new()
 var edgeKeyAddress = 'res://assets/Tile Sets/Basic Tiles v01.00 Edge Key.txt'
 var edgeKey: Array
@@ -29,6 +28,7 @@ func _process(delta):
 
 func wfc():
 	var playerPosition: Vector2 = world_to_map(get_node("../Player Icon").position) #This is Global TileMap coordinates.
+	print("Player position: " + String(playerPosition))
 	var wfcArray: Array
 	wfcArray.resize((searchDist*2)+1)
 	for x in range(0, searchDist*2+1):
@@ -38,8 +38,8 @@ func wfc():
 	var setCount: int = 1
 	#check to see if all cells within the search radius are set. If they are set then do nothing.
 	var allSet: bool = true
-	for x in range(playerLoc.x-searchDist,playerLoc.x+searchDist+1):
-		for y in range(playerLoc.y-searchDist,playerLoc.y+searchDist+1):
+	for x in range(playerPosition.x-searchDist,playerPosition.x+searchDist+1):
+		for y in range(playerPosition.y-searchDist,playerPosition.y+searchDist+1):
 			if get_cell(x,y) == -1:
 				allSet = false
 				print("Tile at (" + String(x) + "," + String(y) + ") is not set.")
@@ -59,17 +59,18 @@ func wfc():
 					for y in range(0, solutionCount[x].size()):
 						if setCount != 0:
 							break
-						if solutionCount[x][y].size() == 0:
-							print("Tile at (" + String(x) + "," + String(y) + ") has no solution.")
-							
+						#if solutionCount[x][y].size() == 0:
+							#print("Tile at (" + String(x) + "," + String(y) + ") in local array has no solution.")
+							#print(String(solutionCount[x][y].size())) #For some reason the solutionCount[x][y].size() within wfcItterate is correct, but here it isnt.
 						if solutionCount[x][y].size() == randomDepth:
-							flipTrans = calc_flip_trans(solutionCount[x][y][rng.randi_range(0, randomDepth)].y)
-							set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)), trueList[rng.randi_range(0, randomDepth)].x ,flipTrans[0], flipTrans[1], flipTrans[2])
+							var chosenID: int = rng.randi_range(0, randomDepth-1)
+							#print("Chosen tile ID: " + String(solutionCount[x][y][chosenID].x))
+							#print("Chosen tile rotation: " + String(solutionCount[x][y][chosenID].y))
+							flipTrans = calc_flip_trans(solutionCount[x][y][chosenID].y)
+							#print("FlipX: " + String(flipTrans[0]) + ", FlipY: " + String(flipTrans[1]) + ", Trans: " + String(flipTrans[2]))
+							set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)), solutionCount[x][y][chosenID].x ,flipTrans[0], flipTrans[1], flipTrans[2])
 							setCount += 1
 				randomDepth += 1
-	else:
-		print("All tiles are already set.")
-		
 
 func wfcItterate(var wfcArray: Array, var playerPosition: Vector2, var solutionCount: Array):
 	var setCount: int = 1
@@ -83,13 +84,18 @@ func wfcItterate(var wfcArray: Array, var playerPosition: Vector2, var solutionC
 			solutionCount[x].resize(wfcArray[x].size())
 		for x in range(0, wfcArray.size()):
 			for y in range(0, wfcArray[x].size()):
+				trueList.resize(0)
 				if wfcArray[x][y] != null:
-					trueList.resize(0)
 					for t in range(0, wfcArray[x][y].size()):
 						for r in range(0, wfcArray[x][y][t].size()):
 							if wfcArray[x][y][t][r] == true:
 								trueList.append(Vector2(t, r)) #Records the tile type and rotations that are valid so that I can go back and check which one was true later.
-				solutionCount[x][y] = trueList
+				solutionCount[x][y] = trueList.duplicate()#Remember that thing about arrays being passed by refference? Yeah well arrays work just fine when you are passing them from one method to another, but when you are within the same method they need to be duplicated.
+				#print("solutionCount[" + String(x) + "][" + String(y) + "] = " + String(solutionCount[x][y].size()))
+		#print("solutionCount double check")
+		#for x in range(0, wfcArray.size()):
+			#for y in range(0, wfcArray[x].size()):
+				#print("solutionCount[" + String(x) + "][" + String(y) + "] = " + String(solutionCount[x][y].size()))
 	return [wfcArray, solutionCount] #This is the most disgusting thing I've done here yet. These should just be declared before Ready but this is only a proof of concept and nothing matters so meh.
 
 func generate_wfc_array(var centerCell: Vector2, var arrayRadius: int): #tilemap coordinates
@@ -141,9 +147,9 @@ func update_cell_status(var arrayCell: Vector2, var offset: Vector2): #arguments
 	if neighborIndex != -1:
 		tileMatches = get_tile_matches(worldCell+horiz, neighborIndex, 1)
 		eliminate_tiles(tileMatches, cellStatus)
-	for t in range(0, 13):
-		for r in range(0, 4):
-			print("cellStatus [" + String(t) + "][" + String(r) + "]: " + String(cellStatus[t][r]))
+	#for t in range(0, 13):
+		#for r in range(0, 4):
+			#print("cellStatus [" + String(t) + "][" + String(r) + "]: " + String(cellStatus[t][r]))
 	return cellStatus
 
 func eliminate_tiles(var tileMatches: Array, var cellStatus: Array): #Suposedly arrays are passed by refference and so I don't need to return them, we'll see
@@ -154,33 +160,32 @@ func eliminate_tiles(var tileMatches: Array, var cellStatus: Array): #Suposedly 
 	
 func get_tile_matches(var worldCell: Vector2, var worldCellIndex: int, var tileEdge: int):
 	#tileEdge uses the same logic as the edge key. A 0 represents the north edge, and every increase increments the edges counter clockwise menaing 1 is west, 2 is south, and 3 is east.
-	print("Getting tile matches for global tile (" + String(worldCell.x) + "," + String(worldCell.y) + ") on side " + String(tileEdge))
+	#print("- - -")
+	#print("Getting tile matches for global tile (" + String(worldCell.x) + "," + String(worldCell.y) + ") on side " + String(tileEdge))
 	var rot: int = get_tile_rotation(worldCell) #Rot uses the same logic as the edge key.
-	var newEdge: int = posmod(tileEdge+rot, 4) #The posmod modulo function wraps the resuts to be 0-3
-	var edgeCode: String = edgeKey[(worldCellIndex*4)+newEdge]
-	print("Tile is index " + String(worldCellIndex))
-	print("If tile were oriented north, finding matches for side " + String(newEdge))
-	print("The edgeCode line for side " + String(newEdge) + " reads: " + String(edgeKey[(worldCellIndex*4)+newEdge]))
-	if edgeCode[5] == "1": #The way I coded the edge types, the 1 and 2 types mate together because their match is inverted. I have to look for the oposite kind.
-		edgeCode[5] = "2"
-	else:
-		if edgeCode[5] == "2":
-			edgeCode[5] = "1"
+	var edgeCode: String = edgeKey[(worldCellIndex*4)+rot]
+	#print("The edgeCode line for rotation " + String(rot) + " reads: " + String(edgeKey[(worldCellIndex*4)+rot]))
+	match edgeCode[5+(4*tileEdge)]:
+		"1":
+			edgeCode[5+(4*tileEdge)] = "2"
+		"2":
+			edgeCode[5+(4*tileEdge)] = "1"
+		"0":
+			edgeCode[5+(4*tileEdge)] = "0"
+	#print("Looking for " + String(edgeCode.substr(5+(4*tileEdge), 3)) + " after mirroring. (position " + String(tileEdge) + ")")
 	var matches: Array = [] #This is the array object that will ultimately be returned
 	matches.resize(13) #Sets the length of the cell status array equal to the number of tile types I'm using
-	var edgeKeyLine: int = 0 #this tracks what line of edge key im on, and it will be incremented every time i write to matchesY
 	for t in range(0, 13):
 		matches[t] = []
 		matches[t].resize(4) #Sets the array within each cell type to be 4 to represent the 4 rotational positions
 		for r in range(0, 4):
-			if edgeKey[(4*t)+posmod(r+tileEdge+2, 4)].substr(5+(4*posmod(r+tileEdge+2, 4)), 8+(4*posmod(r+tileEdge+2, 4))) == edgeCode.substr(5, 3):
-				matches[t][posmod(r+tileEdge, 4)] = true
-				print("Found a match at edgeKeyLine [" + String(t) + "][" + String(r) + "]: " + edgeKey[edgeKeyLine])
+			if edgeKey[(4*t)+r].substr(5+(4*posmod(tileEdge+2, 4)), 3) == edgeCode.substr(5+(4*tileEdge), 3):
+				matches[t][r] = true
+				#print("Found a match at edgeKeyLine [" + String(t) + "][" + String(r) + "] in position " + String(posmod(tileEdge+2, 4)) + ": " + edgeKey[(4*t)+posmod(r+tileEdge+2, 4)])
 			else:
-				matches[t][posmod(r+tileEdge, 4)] = false
+				matches[t][r] = false
 			#The posmod is there because the codes being written to the array are assuming the matching edge is facing north, but I need to rotate them acording to the tileEdge.
 			#This should result in an array full of true/false values coresoponding to the codes in edgeKey
-			edgeKeyLine += 1
 	return matches #Matches should only contain an array of the 4 character tile index/rotation codes.
 
 func get_tile_rotation(var worldCell: Vector2):
