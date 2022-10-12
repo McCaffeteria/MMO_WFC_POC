@@ -31,80 +31,65 @@ func wfc():
 	var playerPosition: Vector2 = world_to_map(get_node("../Player Icon").position) #This is Global TileMap coordinates.
 	var wfcArray: Array
 	wfcArray.resize((searchDist*2)+1)
-	for x in range(0, searchDist*2):
+	for x in range(0, searchDist*2+1):
 		wfcArray[x] = []
 		wfcArray[x].resize((searchDist*2)+1)
 	var solutionCount: Array
 	var setCount: int = 1
 	#check to see if all cells within the search radius are set. If they are set then do nothing.
 	var allSet: bool = true
-	for x in range(playerLoc.x-searchDist,playerLoc.x+searchDist):
-		for y in range(playerLoc.y-searchDist,playerLoc.y+searchDist):
+	for x in range(playerLoc.x-searchDist,playerLoc.x+searchDist+1):
+		for y in range(playerLoc.y-searchDist,playerLoc.y+searchDist+1):
 			if get_cell(x,y) == -1:
 				allSet = false
+				print("Tile at (" + String(x) + "," + String(y) + ") is not set.")
 	if allSet == false:
 		while setCount != 0:
 			setCount = 0
 			var wfcItterateTemp: Array = wfcItterate(wfcArray, playerPosition, solutionCount)
 			wfcArray = wfcItterateTemp[0]
 			solutionCount = wfcItterateTemp[1]
-			var randomDepth: int = 2
+			var randomDepth: int = 1
 			while randomDepth < 14:
 				if setCount != 0:
 					break
-				for x in range(0, solutionCount.size()-1):
+				for x in range(0, solutionCount.size()):
 					if setCount != 0:
 						break
-					for y in range(0, solutionCount[x].size()-1):
+					for y in range(0, solutionCount[x].size()):
 						if setCount != 0:
 							break
-						if solutionCount[x][y] == 0:
-							print("Panic: zero solution at x: " + String(x) + ", y: " + String(y))
-						if solutionCount[x][y] == randomDepth:
-							print("Random Depth: " + String(randomDepth))
-							print("x: " + String(x) + ", y: " + String(y))
-							print("trueList length: " + String(trueList.size()))
-							flipTrans = calc_flip_trans(trueList[rng.randi_range(0, randomDepth-1)].y)
-							#This line is fucked and out of indexes every time, but also I should rewrite the code that sets single solution tiles.
-							#Currently, single solution tiles are set within wfcItterate() but that function should honestly only return the lost of solutions for each tile and the loop HERE should set them. Instead of starting at randomDepth 2 it should just start at 1 (or even zero) and set everything. That way everything should have a trueList even if it's empty.
-							#Currently I'm only putting a trueList in tiles with more than one solution so sometimes if it tries to check a tile that it thought had 1 solution (or no solutions) it freaks out.
-							#ALSO I'm a fucking moron and I've been storing litterally a declared variable called "trueList" in solutionCount[x][y] instead of an un-named array. That's why it's got like 30 solutions half the time.
-							set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)), trueList[rng.randi_range(0, randomDepth-1)].x ,flipTrans[0], flipTrans[1], flipTrans[2])
+						if solutionCount[x][y].size() == 0:
+							print("Tile at (" + String(x) + "," + String(y) + ") has no solution.")
+							
+						if solutionCount[x][y].size() == randomDepth:
+							flipTrans = calc_flip_trans(solutionCount[x][y][rng.randi_range(0, randomDepth)].y)
+							set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)), trueList[rng.randi_range(0, randomDepth)].x ,flipTrans[0], flipTrans[1], flipTrans[2])
 							setCount += 1
 				randomDepth += 1
-
-func setTileRand(var x: int, var y: int, var playerPosition: Vector2, var flipTrans: Array):
-	set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)),flipTrans[0], flipTrans[1], flipTrans[2])
+	else:
+		print("All tiles are already set.")
+		
 
 func wfcItterate(var wfcArray: Array, var playerPosition: Vector2, var solutionCount: Array):
 	var setCount: int = 1
-	var solutionCountClean: Array = [] #This is just a copy of the empty array structure that I can copy every time I need to reconstruct it. The way I made this I don't actually know what cells are empty or not, so instead of just itterating through them all and brute force cleaning them it's easier to just replace it.
-	solutionCountClean.resize(wfcArray.size())
-	for x in range(0, solutionCountClean.size()-1):
-		solutionCountClean[x] = []
-		solutionCountClean[x].resize(wfcArray[x].size())
 	while setCount != 0:
 		wfcArray = generate_wfc_array(playerPosition, searchDist) #Generate the array full of true/false values for every tile type and rotation of every tile within the search radius.
 		setCount = 0
-		solutionCount = solutionCountClean #If arrays are passed by refference, this might fuck everything up honestly. I might need to use Array duplicate(). In lots of places.
-		for x in range(0, wfcArray.size()-1):
-			for y in range(0, wfcArray[x].size()-1):
+		solutionCount = []
+		solutionCount.resize(wfcArray.size())
+		for x in range(0, wfcArray.size()):
+			solutionCount[x] = []
+			solutionCount[x].resize(wfcArray[x].size())
+		for x in range(0, wfcArray.size()):
+			for y in range(0, wfcArray[x].size()):
 				if wfcArray[x][y] != null:
 					trueList.resize(0)
-					for t in range(0, wfcArray[x][y].size()-1):
-						for r in range(0, wfcArray[x][y][t].size()-1):
+					for t in range(0, wfcArray[x][y].size()):
+						for r in range(0, wfcArray[x][y][t].size()):
 							if wfcArray[x][y][t][r] == true:
 								trueList.append(Vector2(t, r)) #Records the tile type and rotations that are valid so that I can go back and check which one was true later.
-					match trueList.size():
-						1:
-							flipTrans = calc_flip_trans(trueList[0].y)
-							set_cellv(array_to_world(Vector2(x, y), calc_offset(playerPosition, searchDist)), trueList[0].x ,flipTrans[0], flipTrans[1], flipTrans[2])
-							setCount += 1
-						0:
-							print("Zero solutions at x: " + String(x) + ", y: " + String(y))
-						_:
-							#Record the number of valid options in the list so that I can pick the cell with the fewest options to set randomly
-							solutionCount[x][y] = trueList.size() #This assumes solutionCount[x][y] is > 1
+				solutionCount[x][y] = trueList
 	return [wfcArray, solutionCount] #This is the most disgusting thing I've done here yet. These should just be declared before Ready but this is only a proof of concept and nothing matters so meh.
 
 func generate_wfc_array(var centerCell: Vector2, var arrayRadius: int): #tilemap coordinates
@@ -112,13 +97,14 @@ func generate_wfc_array(var centerCell: Vector2, var arrayRadius: int): #tilemap
 	#Same with update_cell_status
 	var currentCell: Vector2 = centerCell
 	var arrayOffset: Vector2 = calc_offset(currentCell, arrayRadius)
+	print("Generating array at player location " + String(centerCell) + ", search radius " + String(arrayRadius) + ", with array offset " + String(arrayOffset))
 	var wfcArray: Array = []
 	wfcArray.resize((arrayRadius*2)+1) #Set array's X dimension length
-	for x in range(0, arrayRadius*2):
+	for x in range(0, arrayRadius*2+1):
 		#add a new Y dimension array to each X index and set the Y dimension length
 		wfcArray[x] = []
 		wfcArray[x].resize((arrayRadius*2)+1)
-		for y in range(0, arrayRadius*2):
+		for y in range(0, arrayRadius*2+1):
 			#Use the update_cell_ctatus for each XY cell
 			currentCell = Vector2(x, y) #Array coordinates
 			wfcArray[x][y] = update_cell_status(currentCell, arrayOffset) #This receives a 2D array listing the true/flase posibilities of the actual array tile.
@@ -132,41 +118,49 @@ func update_cell_status(var arrayCell: Vector2, var offset: Vector2): #arguments
 	var vert: Vector2 = Vector2(0,1)
 	var cellStatus: Array = [] #This is the array object that will ultimately be returned
 	cellStatus.resize(13) #Sets the length of the cell status array equal to the number of tile types I'm using
-	for t in range(0, 12):
+	for t in range(0, 13):
 		cellStatus[t] = []
 		cellStatus[t].resize(4) #Sets the array within each cell type to be 4 to represent the 4 rotational positions
-		for r in range(0, 3):
+		for r in range(0, 4):
 			cellStatus[t][r] = true #Sets the value of all possible tile types and rotations as true, in preperation for options to be eliminated later
 	var tileMatches: Array = []
+	#WARNING: The coordinate system for godot has 0,0 at the top left of the grid. I have adjusted the north/south neighbor indexes to account for the grid being inverted. Origionally I had assumed the origin was bottom left.
 	var neighborIndex: int = get_cellv(worldCell+vert) #North
 	if neighborIndex != -1:
-		tileMatches = get_tile_matches(worldCell, neighborIndex, 2) #titleMatches should be the same exact format as cellStatus, and so i can look at every cell in tile matches that is false and set that same tile in cellStatus as false too.
+		tileMatches = get_tile_matches(worldCell+vert, neighborIndex, 0) #titleMatches should be the same exact format as cellStatus, and so i can look at every cell in tile matches that is false and set that same tile in cellStatus as false too.
 		eliminate_tiles(tileMatches, cellStatus)
 	neighborIndex = get_cellv(worldCell-horiz) #West
 	if neighborIndex != -1:
-		tileMatches = get_tile_matches(worldCell, neighborIndex, 3)
+		tileMatches = get_tile_matches(worldCell-horiz, neighborIndex, 3)
 		eliminate_tiles(tileMatches, cellStatus)
 	neighborIndex = get_cellv(worldCell-vert) #South
 	if neighborIndex != -1:
-		tileMatches = get_tile_matches(worldCell, neighborIndex, 0)
+		tileMatches = get_tile_matches(worldCell-vert, neighborIndex, 2)
 		eliminate_tiles(tileMatches, cellStatus)
 	neighborIndex = get_cellv(worldCell+horiz) #East
 	if neighborIndex != -1:
-		tileMatches = get_tile_matches(worldCell, neighborIndex, 1)
+		tileMatches = get_tile_matches(worldCell+horiz, neighborIndex, 1)
 		eliminate_tiles(tileMatches, cellStatus)
+	for t in range(0, 13):
+		for r in range(0, 4):
+			print("cellStatus [" + String(t) + "][" + String(r) + "]: " + String(cellStatus[t][r]))
 	return cellStatus
 
 func eliminate_tiles(var tileMatches: Array, var cellStatus: Array): #Suposedly arrays are passed by refference and so I don't need to return them, we'll see
-	for t in range(0, 12):
-		for r in range(0, 3):
+	for t in range(0, 13):
+		for r in range(0, 4):
 			if tileMatches[t][r] == false:
 				cellStatus[t][r] = false
 	
 func get_tile_matches(var worldCell: Vector2, var worldCellIndex: int, var tileEdge: int):
 	#tileEdge uses the same logic as the edge key. A 0 represents the north edge, and every increase increments the edges counter clockwise menaing 1 is west, 2 is south, and 3 is east.
+	print("Getting tile matches for global tile (" + String(worldCell.x) + "," + String(worldCell.y) + ") on side " + String(tileEdge))
 	var rot: int = get_tile_rotation(worldCell) #Rot uses the same logic as the edge key.
 	var newEdge: int = posmod(tileEdge+rot, 4) #The posmod modulo function wraps the resuts to be 0-3
 	var edgeCode: String = edgeKey[(worldCellIndex*4)+newEdge]
+	print("Tile is index " + String(worldCellIndex))
+	print("If tile were oriented north, finding matches for side " + String(newEdge))
+	print("The edgeCode line for side " + String(newEdge) + " reads: " + String(edgeKey[(worldCellIndex*4)+newEdge]))
 	if edgeCode[5] == "1": #The way I coded the edge types, the 1 and 2 types mate together because their match is inverted. I have to look for the oposite kind.
 		edgeCode[5] = "2"
 	else:
@@ -175,16 +169,18 @@ func get_tile_matches(var worldCell: Vector2, var worldCellIndex: int, var tileE
 	var matches: Array = [] #This is the array object that will ultimately be returned
 	matches.resize(13) #Sets the length of the cell status array equal to the number of tile types I'm using
 	var edgeKeyLine: int = 0 #this tracks what line of edge key im on, and it will be incremented every time i write to matchesY
-	for t in range(0, 12):
+	for t in range(0, 13):
 		matches[t] = []
 		matches[t].resize(4) #Sets the array within each cell type to be 4 to represent the 4 rotational positions
-		for r in range(0, 3):
-			if edgeKey[edgeKeyLine].substr(5, -1) == edgeCode.substr(5, -1): #characters 5 6 and 7 contain the edge type and color code, so reading all characters from position 5 onward should work.
+		for r in range(0, 4):
+			if edgeKey[(4*t)+posmod(r+tileEdge+2, 4)].substr(5+(4*posmod(r+tileEdge+2, 4)), 8+(4*posmod(r+tileEdge+2, 4))) == edgeCode.substr(5, 3):
 				matches[t][posmod(r+tileEdge, 4)] = true
+				print("Found a match at edgeKeyLine [" + String(t) + "][" + String(r) + "]: " + edgeKey[edgeKeyLine])
 			else:
 				matches[t][posmod(r+tileEdge, 4)] = false
 			#The posmod is there because the codes being written to the array are assuming the matching edge is facing north, but I need to rotate them acording to the tileEdge.
 			#This should result in an array full of true/false values coresoponding to the codes in edgeKey
+			edgeKeyLine += 1
 	return matches #Matches should only contain an array of the 4 character tile index/rotation codes.
 
 func get_tile_rotation(var worldCell: Vector2):
