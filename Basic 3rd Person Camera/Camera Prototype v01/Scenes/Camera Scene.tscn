@@ -1,0 +1,37 @@
+[gd_scene load_steps=4 format=2]
+
+[sub_resource type="CapsuleShape" id=1]
+radius = 0.5
+
+[sub_resource type="CapsuleMesh" id=2]
+radius = 0.5
+
+[sub_resource type="PrismMesh" id=3]
+size = Vector3( 1, 1, 0.1 )
+
+[node name="CameraRoot" type="Spatial"]
+
+[node name="AvatarStaticBody" type="StaticBody" parent="."]
+
+[node name="AvatarCollisionShape" type="CollisionShape" parent="AvatarStaticBody"]
+transform = Transform( 1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 1, 0 )
+shape = SubResource( 1 )
+
+[node name="AvatarMeshInstance" type="MeshInstance" parent="AvatarStaticBody/AvatarCollisionShape"]
+mesh = SubResource( 2 )
+skeleton = NodePath("../../..")
+
+[node name="MeshInstance" type="MeshInstance" parent="AvatarStaticBody/AvatarCollisionShape"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.106443, -1.14717 )
+mesh = SubResource( 3 )
+
+[node name="CameraPivotPoint" type="Spatial" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0 )
+
+[node name="CameraSpringArm" type="SpringArm" parent="CameraPivotPoint"]
+transform = Transform( -1, 8.74228e-08, 0, 8.74228e-08, 1, 8.74228e-08, 7.64274e-15, 8.74228e-08, -1, -1, 0.5, -1.512 )
+spring_length = 2.0
+
+[node name="Camera" type="Camera" parent="CameraPivotPoint/CameraSpringArm"]
+transform = Transform( 1, 6.6815e-22, 0, 6.6815e-22, 1, 0, 0, 0, 1, 0, -3.57628e-07, 1.99458 )
+fov = 90.0
