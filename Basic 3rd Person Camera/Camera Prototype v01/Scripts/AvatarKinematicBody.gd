@@ -31,9 +31,15 @@ func _physics_process(delta):
 	avatar_rotation.x -= Input.get_action_strength("look_down")
 	avatar_rotation.x += Input.get_action_strength("look_up")
 	
-	#This normalizes the vector length if it's not zero. This wont play nice with an analogue stick but it's fine for now since it's in the tutorial.
-	#if direction != Vector3.ZERO:
-		#direction = direction.normalized()
+	# Rotation amount
+	rotate_final.y = deg2rad(avatar_rotation.y * look_speed) * delta
+	rotate_final.x = deg2rad(avatar_rotation.x * look_speed) * delta
+	# Rotating the avatar root (yaw) and the camera pivot (pitch)
+	rotate_y(rotate_final.y)
+	$CameraPivotPoint.rotate_x(rotate_final.x)
+	
+	#Simple line to rotate the direction vector by the same amount that the AvatarKinematicBody object is rotated. Without this line the direction input moves the object in world space, but we want it to move relative to the camera.
+	direction = direction.rotated(Vector3(0, 1, 0), get_rotation().y)
 	
 	# Ground velocity
 	velocity.x = direction.x * speed
@@ -41,11 +47,4 @@ func _physics_process(delta):
 	# Vertical velocity
 	velocity.y -= fall_acceleration * delta
 	# Moving the character using the built in method that includeds colision and deflection.
-	velocity = move_and_slide(velocity, Vector3.UP)
-	
-	# Rotation amount
-	rotate_final.y = deg2rad(avatar_rotation.y * look_speed) * delta
-	rotate_final.x = deg2rad(avatar_rotation.x * look_speed) * delta
-	# Rotating the avatar root (yaw) and the camera pivot (pitch)
-	rotate_y(rotate_final.y)
-	$CameraPivotPoint.rotate_x(rotate_final.x)
+	velocity = move_and_slide(velocity, Vector3.UP) #The reason this is setting the velocity variable while also refferencing the velocity variable is because the method returns the modified velocity which can be usefull in case the object collides. If you expected it to move 1 unit but it only moves .5 units then the vaslue of valocity is now .5 and you can refference the correct distance if you have new calculations to do within the same frame.
