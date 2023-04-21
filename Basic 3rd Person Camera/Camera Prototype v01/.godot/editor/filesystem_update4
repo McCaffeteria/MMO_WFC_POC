@@ -1,0 +1,6 @@
+res://Scenes/Main.tscn
+res://default_env.tres
+res://Scripts/AvatarKinematicBody.gd
+res://Scenes/Camera Scene.tscn
+res://Environments/default_env.tres
+res://Scenes/Main.gd

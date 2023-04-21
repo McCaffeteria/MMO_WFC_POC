@@ -1,0 +1,10 @@
+2a60927148abd1d33b818b535e306557
+::res://::1672562827
+default_env.tres::Environment::8590877858086676094::1682072152::0::1::::<><>::
+icon.png::CompressedTexture2D::4062115958389491294::1672562936::1682071706::1::::<><>::
+::res://Environments/::1682072302
+::res://Scenes/::1672563047
+Camera Scene.tscn::PackedScene::2114669491232460512::1682072152::0::1::::<><>::res://Scripts/AvatarKinematicBody.gd
+Main.tscn::PackedScene::8470134754794785607::1682072152::0::1::::<><>::uid://5emkd8o3w0h5
+::res://Scripts/::1672563060
+AvatarKinematicBody.gd::GDScript::-1::1682072004::0::1::::<>CharacterBody3D<>::

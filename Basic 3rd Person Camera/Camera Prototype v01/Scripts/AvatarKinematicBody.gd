@@ -1,17 +1,25 @@
-extends KinematicBody
+extends CharacterBody3D
 
 # How fast the player moves in meters per second. Most people walk about 1.4 meters per second.
-export var speed = 1.5
+@export var speed = 1.5
 # The downward acceleration when in the air, in meters per second squared.
-export var fall_acceleration = 9.8
+@export var fall_acceleration = 9.8
 # How fast the camera rotates in any direction in degrees per second.
 # Switch to radians later, solid advice from online.
-export var look_speed = 270
+@export var look_speed = 270
 
-var velocity = Vector3.ZERO
+var my_velocity = Vector3.ZERO
 var rotate_final = Vector3.ZERO
 
+func _enter_tree():
+	set_multiplayer_authority(str(name).to_int())
+
+func _ready():
+	if not is_multiplayer_authority(): return
+
 func _physics_process(delta):
+	if not is_multiplayer_authority(): return
+	
 	# We create a local variable to store the input direction.
 	var direction = Vector3.ZERO
 	var avatar_rotation = Vector3.ZERO
@@ -32,8 +40,8 @@ func _physics_process(delta):
 	avatar_rotation.x += Input.get_action_strength("look_up")
 	
 	# Rotation amount
-	rotate_final.y = deg2rad(avatar_rotation.y * look_speed) * delta
-	rotate_final.x = deg2rad(avatar_rotation.x * look_speed) * delta
+	rotate_final.y = deg_to_rad(avatar_rotation.y * look_speed) * delta
+	rotate_final.x = deg_to_rad(avatar_rotation.x * look_speed) * delta
 	# Rotating the avatar root (yaw) and the camera pivot (pitch)
 	rotate_y(rotate_final.y)
 	$CameraPivotPoint.rotate_x(rotate_final.x)
@@ -42,9 +50,12 @@ func _physics_process(delta):
 	direction = direction.rotated(Vector3(0, 1, 0), get_rotation().y)
 	
 	# Ground velocity
-	velocity.x = direction.x * speed
-	velocity.z = direction.z * speed
+	my_velocity.x = direction.x * speed
+	my_velocity.z = direction.z * speed
 	# Vertical velocity
-	velocity.y -= fall_acceleration * delta
+	my_velocity.y -= fall_acceleration * delta
 	# Moving the character using the built in method that includeds colision and deflection.
-	velocity = move_and_slide(velocity, Vector3.UP) #The reason this is setting the velocity variable while also refferencing the velocity variable is because the method returns the modified velocity which can be usefull in case the object collides. If you expected it to move 1 unit but it only moves .5 units then the vaslue of valocity is now .5 and you can refference the correct distance if you have new calculations to do within the same frame.
+	set_velocity(my_velocity)
+	set_up_direction(Vector3.UP)
+	move_and_slide()
+	my_velocity = my_velocity #The reason this is setting the velocity variable while also refferencing the velocity variable is because the method returns the modified velocity which can be usefull in case the object collides. If you expected it to move 1 unit but it only moves .5 units then the vaslue of valocity is now .5 and you can refference the correct distance if you have new calculations to do within the same frame.
